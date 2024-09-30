@@ -50,14 +50,14 @@ if __name__ == '__main__':
                  're_visit': re_visit_feats, 'Active_association': Active_association_feats,
                  'Co_visiting': Co_visiting_feats}
 
-    # 1. 加载最佳模型
+    # 1. Load the best model
     model.load_state_dict(torch.load("pth/best_model.pth"))
     model.eval()
 
-    # 2. 构建负图
+    # 2. Constructing negative graphs
     negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user')).to(device)
 
-    # 3. 计算用户嵌入
+    # 3. Calculating user embeddings
     with torch.no_grad():
         pos_score, neg_score, node_emb, contrastive_loss = model(g, negative_graph, node_features, edge_attr,
                                                                  ('user', 'friend', 'user'))
@@ -67,16 +67,16 @@ if __name__ == '__main__':
     pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())
     pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())
     pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)
-    # 4. 在测试集上进行评估
+    # 4. Evaluate on the test set
     neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))  # 生成负边索引
     link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)  # 获取链接标签
     link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)  # 预测链接
     loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)  # 计算损失（可选）
 
-    # 计算评估指标
+    #Calculating evaluation metrics
     test_auc, ap, top_k, f1_pos, f1_neg, f1_macro = test(user_emb, g, friend_list_index_test)
 
-    # 打印结果
+    #Printing Results
     print("Test AUC:", test_auc)
     print("Test AP:", ap)
     print("Top K Results:", top_k)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     print("F1 Score (Negative Class):", f1_neg)
     print("F1 Score (Macro Average):", f1_macro)
 
-    # 清理内存
+    # Clean up the memory
     del negative_graph
     torch.cuda.empty_cache()
 
