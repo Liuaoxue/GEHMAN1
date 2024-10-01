@@ -55,10 +55,12 @@ class Edge_level(nn.Module):
             self.fc = nn.Linear(
                 self._in_src_feats, out_feats * num_heads, bias=False)
         self.fc_edg = nn.Linear(self.edge_dim, self.edge_dim * num_heads)
+        
         # Define attention parameters
         self.attn_l = nn.Parameter(th.FloatTensor(size=(1, num_heads, out_feats)))
         self.attn_r = nn.Parameter(th.FloatTensor(size=(1, num_heads, out_feats)))
         self.attn_edg = nn.Parameter(th.FloatTensor(size=(1, num_heads, self.edge_dim)))
+        
         # Define output linear layer
         self.lin_out = nn.Linear(self.edge_dim + self._out_feats, self._out_feats)
         self.feat_drop = nn.Dropout(feat_drop)
@@ -82,6 +84,7 @@ class Edge_level(nn.Module):
     def reset_parameters(self):
         """Reinitialize learnable parameters for the model."""
         gain = nn.init.calculate_gain('relu')
+        
         # Initialize weights for layers
         if hasattr(self, 'fc'):
             nn.init.xavier_normal_(self.fc.weight, gain=gain)
@@ -115,7 +118,7 @@ class Edge_level(nn.Module):
             torch.Tensor: Output features for the edges.
         """
         
-        with graph.local_scope():   #Process node and edge features
+        with graph.local_scope():   # Process node and edge features
             if isinstance(feat, tuple):
                 src_prefix_shape = feat[0].shape[:-1]
                 dst_prefix_shape = feat[1].shape[:-1]  #
@@ -144,6 +147,7 @@ class Edge_level(nn.Module):
                     feat_dst = feat_src[:graph.number_of_dst_nodes()]
                     h_dst = h_dst[:graph.number_of_dst_nodes()]
                     dst_prefix_shape = (graph.number_of_dst_nodes(),) + dst_prefix_shape[1:]
+                    
             # Compute edge weights
             el = (feat_src * self.attn_l).sum(dim=-1).unsqueeze(-1)
             er = (feat_dst * self.attn_r).sum(dim=-1).unsqueeze(-1)
@@ -157,6 +161,7 @@ class Edge_level(nn.Module):
             e = self.leaky_relu(data_e)
             # compute softmax
             graph.edata['a'] = self.attn_drop(edge_softmax(graph,e))
+            
             # message passing
             def edge_udf(edges):
                 return {'he': torch.mul(edges.data['a'], edges.data['_edge_weight'])}
@@ -167,12 +172,14 @@ class Edge_level(nn.Module):
             f = graph.dstdata['ft_f']
             rst = graph.dstdata['ft']
             rst = self.lin_out(torch.cat([f, rst], dim=-1))
+            
             # residual
             if self.res_fc is not None:
                 # Use -1 rather than self._num_heads to handle broadcasting
                 resval = self.res_fc(h_dst).view(
                     *dst_prefix_shape, -1, self._out_feats)
                 rst = rst + resval
+                
             # bias
             if self.bias is not None:
                 rst = rst + self.bias.view(
@@ -186,14 +193,11 @@ class Edge_level(nn.Module):
 class Semantic_level(nn.Module):
 
     """Semantic-level neural network module for aggregating features across multiple heads.
-
     Args:
         in_size (int): Input feature size for each head.
         num_head (int): Number of attention heads.
         hidden_size (int, optional): Hidden layer size in the semantic model. Default is 128.
     """
-
-    
     def __init__(self, in_size, num_head, hidden_size=128):
         super(Semantic_level, self).__init__()
         self.Linear1 = nn.Linear(in_size * num_head, hidden_size)
@@ -330,7 +334,6 @@ class HMGNN(nn.Module):
     def forward(self, graph, inputs, edge_attr):
 
          """Forward pass for the HMGNN.
-
         Args:
             graph (dgl.DGLGraph): DGL graph containing node and edge data.
             inputs (dict): Node features for processing.
@@ -408,7 +411,6 @@ class Model(nn.Module):
         Returns:
             tuple: Predictions for positive and negative edges, along with node representations.
         """
-
         
         feat2 = {}
         feat2['user'] = self.relu(self.fc_list_node[0](node_feat['user']))
