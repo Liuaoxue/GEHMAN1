@@ -101,7 +101,7 @@ def data(d_node,city):
     friend_edge_attr_val = np.array(friend_edge_attr_val)
 
 
-    #Create graph data structure with node types and edge types
+    # Create graph data structure with node types and edge types
     graph_data = {
         ('user', 'friend', 'user'): (torch.tensor(friend_list_index_train[0]), torch.tensor(friend_list_index_train[1])),
         ('user', 'visit', 'poi'): (torch.tensor(visit_list_edge_tensor[0]), torch.tensor(visit_list_edge_tensor[1])),
