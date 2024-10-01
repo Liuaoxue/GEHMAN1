@@ -32,19 +32,19 @@ city=args.city
 
 #Hyper-parameters
 
-d_node=128            # Dimension of node features
-epoch=args.epochs          # Number of training epochs
-K=args.multihead         # Number of heads for multi-head attention
-lambda_1=args.lambda_1       # Weight for contrastive loss
-lambda_2=args.lambda_2      # Weight for link prediction loss
-lambda_3=args.lambda_3    # Weight for margin loss
+d_node=128                                                         # Dimension of node features
+epoch=args.epochs                                                  # Number of training epochs
+K=args.multihead                                                   # Number of heads for multi-head attention
+lambda_1=args.lambda_1                                             # Weight for contrastive loss
+lambda_2=args.lambda_2                                             # Weight for link prediction loss
+lambda_3=args.lambda_3                                              # Weight for margin loss
 file='output1/'+str(city)+'-*-_multi_head_'+str(K)+'lambda_1_'+str(lambda_1)+'lambda_2_'+str(lambda_2)+'lambda_3_------'+str(lambda_3)+'.txt'
 print(file)
 if __name__ == '__main__':
     # Load data
-    g,friend_list_index_test,friend_list_index_val=data(d_node,city)     # Load graph and indices
-    g = g.to(device)                                                         # Move graph to the specified device
-    etype = g.etypes                                                          # Get edge types
+    g,friend_list_index_test,friend_list_index_val=data(d_node,city)                # Load graph and indices
+    g = g.to(device)                                                                # Move graph to the specified device
+    etype = g.etypes                                                                 # Get edge types
     # rel_names = ['friend', 'visit', 'co_occurrence', 'live_with', 're_live_with', 'class_same', 're_visit']
     #rel_names = ['friend', 'visit', 'co_occurrence', 'live_with', 're_live_with', 'class_same', 're_visit']
     rel_names = ['friend', 'visit', 'co_occurrence', 'live_with', 're_live_with', 'class_same', 're_visit','Active_association','Co_visiting']
@@ -73,12 +73,12 @@ if __name__ == '__main__':
 
     # Get positive edge indices
     pos_edge_index_2 = []
-    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))             # Get positive edges
-    pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())          # Append source nodes
-    pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())        # Append target nodes
-    pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)   # Convert to tensor
+    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))                            # Get positive edges
+    pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())                     # Append source nodes
+    pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())                     # Append target nodes
+    pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)                # Convert to tensor
 
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)     # Adam optimizer
+    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)                 # Adam optimizer
     best_auc = 0     # Best AUC tracker
     best_ap = 0     # Best AP tracker
     print(city)
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     
     for epoch in range(epoch):
         # Clear CUDA cache to manage memory
-        torch.cuda.memory_reserved()  # Check reserved memory
-        torch.cuda.empty_cache()  # Release unused memory
+        torch.cuda.memory_reserved()                                               # Check reserved memory
+        torch.cuda.empty_cache()                                                   # Release unused memory
 
         # Construct negative graph
         negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user'))
@@ -99,22 +99,22 @@ if __name__ == '__main__':
         user_emb = node_emb['user']
 
         # Clean up temporary variables
-        del negative_graph             # Remove negative graph to free memory
+        del negative_graph                                                           # Remove negative graph to free memory
    
 
         # Get negative edge indices
-        neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))                # Generate negative edges
-        link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)     # Create link labels
-        link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)         # Predict link probabilities
+        neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))                    # Generate negative edges
+        link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)        # Create link labels
+        link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)           # Predict link probabilities
 
         # Compute losses
-        loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)      # Link prediction loss
+        loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)                                   # Link prediction loss
         loss = margin_loss(pos_score, neg_score) * lambda_3 + loss_cor * lambda_2 + contrastive_loss*lambda_1     # Total loss
             
         # Backpropagation
-        opt.zero_grad()   # Reset gradients
-        loss.backward()   # Compute gradients
-        opt.step()       # Update weights
+        opt.zero_grad()                           # Reset gradients
+        loss.backward()                           # Compute gradients
+        opt.step()                                # Update weights
 
 
         # Clean up intermediate variables
@@ -135,13 +135,13 @@ if __name__ == '__main__':
             # Val the model and compute metrics
             test_auc, ap,top_k , f1_pos, f1_neg, f1_macro = test(user_emb, g, friend_list_index_val)
             if test_auc > best_auc:
-                best_auc = test_auc            # Update best AUC
+                best_auc = test_auc                                                      # Update best AUC
                 print("best_auc:", best_auc)
-                best_model_state = model.state_dict()      # Save model state
-                torch.save(best_model_state, "pth/best_model.pth")   #Save best model 
+                best_model_state = model.state_dict()                                    # Save model state
+                torch.save(best_model_state, "pth/best_model.pth")                       #Save best model 
                 np.save("data/save_user_embedding/SP/sp_3/_best_auc_SP" + str(best_auc) + ".npy", user_emb.cpu().detach().numpy())
             if ap > best_ap:
-                best_ap = ap            # Update best AP
+                best_ap = ap                                                           # Update best AP
                 print("beat_ap:", ap)
 
     
@@ -151,8 +151,8 @@ if __name__ == '__main__':
             #need_write="epoch"+str(epoch)+" best_auc: "+str(best_auc)+" best_ap: "+str(best_ap)
             top='top_1+'+str(top_k[0])+' top_5+'+str(top_k[1])+' top_10+'+str(top_k[2])+' top_15+'+str(top_k[3])+' top_20+'+str(top_k[4])
             with open(file, 'a+') as f:
-                f.write(need_write + '\n')              # Write loss and metrics
-                f.write(top + '\n')                     # Write top-k metrics
+                f.write(need_write + '\n')                                           # Write loss and metrics
+                f.write(top + '\n')                                                  # Write top-k metrics
             
                 
                 
