@@ -16,7 +16,7 @@ from model import *
 from utils import *
 
 
-#Hyper-parameters
+# Hyper-parameters
 d_node=128                                                      # Node feature dimension
 epoch=args.epochs                                               # Number of training epochs
 K=args.multihead                                                # Number of attention heads
@@ -25,7 +25,7 @@ lambda_2=args.lambda_2
 lambda_3=args.lambda_3
 device = torch.device('cuda:' + args.cuda if torch.cuda.is_available() else 'cpu')  # Set device
 if __name__ == '__main__':
-    #  Load the data and construct the graph
+    # Load the data and construct the graph
     g,friend_list_index_test,friend_list_index_val=data(d_node,"JK")        # Load graph and index lists
     g = g.to(device)                                                        # Move graph to the specified device
 
@@ -78,9 +78,9 @@ if __name__ == '__main__':
     pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)
     
     # Evaluate on the test set
-    neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))                                                        # Generate negative edge indices
-    link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)                                            # Get link labels
-    link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)                                               # Predict link likelihoods
+    neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))                                                         # Generate negative edge indices
+    link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)                                             # Get link labels
+    link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)                                                # Predict link likelihoods
     loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)                                                #  Compute loss (optional)
 
     # Calculating evaluation metrics
