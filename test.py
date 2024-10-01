@@ -36,13 +36,13 @@ if __name__ == '__main__':
     # Initialize the model
     model = Model(d_node, 256, 512, rel_names, K).to(device)
 
-    #  Load node and edge features
+    # Load node and edge features
     user_feats = g.nodes['user'].data['u_fe'].to(device)
     poi_feats = g.nodes['poi'].data['p_fe'].to(device)
     node_features = {'user': user_feats, 'poi': poi_feats}
 
 
-    #  Load edge features for each relationship type
+    # Load edge features for each relationship type
     friend_feats = g.edges['friend'].data['f_fe'].to(device)
     visit_feats = g.edges['visit'].data['v_fe'].to(device)
     co_occurrence_feat = g.edges['co_occurrence'].data['c_fe'].to(device)
@@ -59,14 +59,14 @@ if __name__ == '__main__':
                  're_visit': re_visit_feats, 'Active_association': Active_association_feats,
                  'Co_visiting': Co_visiting_feats}
 
-    #  Load the best model
+    # Load the best model
     model.load_state_dict(torch.load("pth/best_model.pth"))
     model.eval()
 
-    #  Construct negative graphs for contrastive learning
+    # Construct negative graphs for contrastive learning
     negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user')).to(device)
 
-    #  Calculating user embeddings
+    # Calculating user embeddings
     with torch.no_grad():
         pos_score, neg_score, node_emb, contrastive_loss = model(g, negative_graph, node_features, edge_attr,
                                                                  ('user', 'friend', 'user'))
