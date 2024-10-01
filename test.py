@@ -14,28 +14,35 @@ from torch import cosine_similarity
 from dataset import *
 from model import *
 from utils import *
-#Hyper-parameters
 
-d_node=128
-epoch=args.epochs
-K=args.multihead     #multi_head
+
+#Hyper-parameters
+d_node=128                     # Node feature dimension
+epoch=args.epochs              # Number of training epochs
+K=args.multihead                # Number of attention heads
 lambda_1=args.lambda_1
 lambda_2=args.lambda_2
 lambda_3=args.lambda_3
-device = torch.device('cuda:' + args.cuda if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:' + args.cuda if torch.cuda.is_available() else 'cpu')  # Set device
 if __name__ == '__main__':
-    g,friend_list_index_test,friend_list_index_val=data(d_node,"JK")
-    g = g.to(device)
-    # user_emb=torch.tensor(np.load("data/save_user_embedding/best_auc_JK0.8760630365484157.npy")).to(device)
-    # test_auc, ap,f1_pos, f1_neg, f1_macro = test(user_emb, g, friend_list_index_test)
-    # print("test_auc:",test_auc)
-    # print("test_ap:",ap)
+    #  Load the data and construct the graph
+    g,friend_list_index_test,friend_list_index_val=data(d_node,"JK")       # Load graph and index lists
+    g = g.to(device)                                                        # Move graph to the specified device
+
+    # Define relationships in the graph
     rel_names = ['friend', 'visit', 'co_occurrence', 'live_with', 're_live_with', 'class_same', 're_visit',
                  'Active_association', 'Co_visiting']
+
+    # Initialize the model
     model = Model(d_node, 256, 512, rel_names, K).to(device)
+
+    #  Load node and edge features
     user_feats = g.nodes['user'].data['u_fe'].to(device)
     poi_feats = g.nodes['poi'].data['p_fe'].to(device)
     node_features = {'user': user_feats, 'poi': poi_feats}
+
+
+    #  Load edge features for each relationship type
     friend_feats = g.edges['friend'].data['f_fe'].to(device)
     visit_feats = g.edges['visit'].data['v_fe'].to(device)
     co_occurrence_feat = g.edges['co_occurrence'].data['c_fe'].to(device)
@@ -45,16 +52,18 @@ if __name__ == '__main__':
     re_visit_feats = g.edges['re_visit'].data['r_fe'].to(device)
     Active_association_feats = g.edges['Active_association'].data['Ac_fe'].to(device)
     Co_visiting_feats = g.edges['Co_visiting'].data['Co_fe'].to(device)
+
+    # Combine edge attributes
     edge_attr = {'friend': friend_feats, 'visit': visit_feats, 'co_occurrence': co_occurrence_feat,
                  'live_with': live_with_feats, 're_live_with': re_live_with_feats, 'class_same': class_same_feats,
                  're_visit': re_visit_feats, 'Active_association': Active_association_feats,
                  'Co_visiting': Co_visiting_feats}
 
-    # 1. Load the best model
+    #  Load the best model
     model.load_state_dict(torch.load("pth/best_model.pth"))
     model.eval()
 
-    # 2. Constructing negative graphs
+   #  Construct negative graphs for contrastive learning
     negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user')).to(device)
 
     # 3. Calculating user embeddings
@@ -63,15 +72,16 @@ if __name__ == '__main__':
                                                                  ('user', 'friend', 'user'))
         user_emb = node_emb['user']
     pos_edge_index_2 = []
-    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))
+    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))                     # Get positive edge indices
     pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())
     pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())
     pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)
+    
     # 4. Evaluate on the test set
-    neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))  # 生成负边索引
-    link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)  # 获取链接标签
-    link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)  # 预测链接
-    loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)  # 计算损失（可选）
+    neg_edge_index = neg_edge_in(g, 5, ('user', 'friend', 'user'))                 # Generate negative edge indices
+    link_labels = get_link_labels(pos_edge_index_2, neg_edge_index).to(device)     # Get link labels
+    link_logits = model.predict(user_emb, pos_edge_index_2, neg_edge_index)        # Predict link likelihoods
+    loss_cor = F.binary_cross_entropy_with_logits(link_logits, link_labels)        #  Compute loss (optional)
 
     #Calculating evaluation metrics
     test_auc, ap, top_k, f1_pos, f1_neg, f1_macro = test(user_emb, g, friend_list_index_test)
@@ -85,7 +95,7 @@ if __name__ == '__main__':
     print("F1 Score (Macro Average):", f1_macro)
 
     # Clean up the memory
-    del negative_graph
-    torch.cuda.empty_cache()
+    del negative_graph           # Delete negative graph to free memory
+    torch.cuda.empty_cache()     # Clear CUDA memory
 
 
