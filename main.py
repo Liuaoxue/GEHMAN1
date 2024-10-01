@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Initialize gradient scaler
     scaler = GradScaler()
     for epoch in range(epoch):
-            # 清理缓存
+            # 清理
 
         torch.cuda.memory_reserved()  # 查看预留的显存
         torch.cuda.empty_cache()  # 释放未使用的显存
