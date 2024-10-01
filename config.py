@@ -1,9 +1,7 @@
 import argparse
 def parse():
     """
-    
     Create a command line argument parser and define the required arguments.
-
     Returns:
         args: The parsed command line argument object containing user input values.
     """
