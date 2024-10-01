@@ -21,8 +21,25 @@ from torch.nn import init
 
 # Edge-level model
 class Edge_level(nn.Module):
+    """Edge-level neural network module for processing edge features in a heterogeneous graph.
+    Args:
+        in_feats (int or tuple): Input feature size for source and destination nodes.
+        out_feats (int): Output feature size for edges.
+        num_heads (int): Number of attention heads.
+        edge_dim (int, optional): Dimensionality of edge features. Default is 5.
+        feat_drop (float, optional): Dropout rate for node features. Default is 0.
+        attn_drop (float, optional): Dropout rate for attention weights. Default is 0.
+        negative_slope (float, optional): Negative slope for Leaky ReLU. Default is 0.2.
+        residual (bool, optional): Use residual connections if True. Default is False.
+        activation (callable, optional): Activation function to apply. Default is None.
+        allow_zero_in_degree (bool, optional): Allow zero in-degree nodes. Default is False.
+        bias (bool, optional): Include bias in linear layers if True. Default is True.
+    """
+    
     def __init__(self,  in_feats,  out_feats,  num_heads, edge_dim=5,  feat_drop=0., attn_drop=0., negative_slope=0.2,residual=False, activation=None,allow_zero_in_degree=False, bias=True):
         super(Edge_level, self).__init__()
+        # Initialize parameters
+        
         self.edge_dim = edge_dim
         self._num_heads = num_heads
         self._in_src_feats, self._in_dst_feats = expand_as_pair(in_feats)
@@ -63,8 +80,9 @@ class Edge_level(nn.Module):
         self.activation = activation
 
     def reset_parameters(self):
-        # Reinitialize learnable parameters.
+        """Reinitialize learnable parameters for the model."""
         gain = nn.init.calculate_gain('relu')
+        # Initialize weights for layers
         if hasattr(self, 'fc'):
             nn.init.xavier_normal_(self.fc.weight, gain=gain)
         else:
@@ -80,9 +98,23 @@ class Edge_level(nn.Module):
             nn.init.xavier_normal_(self.res_fc.weight, gain=gain)
 
     def set_allow_zero_in_degree(self, set_value):
+         """Set whether to allow nodes with zero in-degree.
+            Args:
+                set_value (bool): Boolean value indicating whether to allow zero in-degree.
+        """
+        
         self._allow_zero_in_degree = set_value
 
     def forward(self, graph, feat, edge_fea,):
+        """Forward pass for the edge-level model.
+        Args:
+            graph (dgl.DGLGraph): DGL graph containing node and edge data.
+            feat (tuple): Tuple of source and destination node features.
+            edge_fea (torch.Tensor): Edge feature tensor.
+        Returns:
+            torch.Tensor: Output features for the edges.
+        """
+        
         with graph.local_scope():   #Process node and edge features
             if isinstance(feat, tuple):
                 src_prefix_shape = feat[0].shape[:-1]
@@ -152,6 +184,16 @@ class Edge_level(nn.Module):
 
 # Semantic-level model
 class Semantic_level(nn.Module):
+
+    """Semantic-level neural network module for aggregating features across multiple heads.
+
+    Args:
+        in_size (int): Input feature size for each head.
+        num_head (int): Number of attention heads.
+        hidden_size (int, optional): Hidden layer size in the semantic model. Default is 128.
+    """
+
+    
     def __init__(self, in_size, num_head, hidden_size=128):
         super(Semantic_level, self).__init__()
         self.Linear1 = nn.Linear(in_size * num_head, hidden_size)
@@ -160,6 +202,17 @@ class Semantic_level(nn.Module):
         self.num_head = num_head
         self.in_size = in_size
     def forward(self, z):
+
+         """Forward pass for the semantic-level model.
+
+        Args:
+            z (torch.Tensor): Input feature tensor from multiple heads.
+
+        Returns:
+            torch.Tensor: Aggregated features for each head.
+        """
+        # Process input and return aggregated features
+        
         z = th.stack(z, dim=0)
         z = z.transpose(1, 0, )
         z = th.reshape(z, (z.shape[0], z.shape[1], z.shape[2] * z.shape[3]))
@@ -174,6 +227,14 @@ class Semantic_level(nn.Module):
 
 # Heterogeneous graph model
 class HeteroGraph(nn.Module):
+
+    """Heterogeneous graph model for processing different types of nodes and edges.
+
+    Args:
+        mods (dict): Dictionary of edge-level models for each relationship type.
+        in_size_sem (int): Input feature size for semantic attention.
+        num_head (int): Number of attention heads.
+    """
     def __init__(self, mods, in_size_sem, num_head):
         super(HeteroGraph, self).__init__()
         self.semantic_attention1 = Semantic_level(in_size=in_size_sem, num_head=num_head)
@@ -185,6 +246,19 @@ class HeteroGraph(nn.Module):
                 set_allow_zero_in_degree_fn(True)
 
     def forward(self, g, inputs, edge_attr, mod_args=None, mod_kwargs=None):
+
+        """Forward pass for the heterogeneous graph model.
+
+        Args:
+            g (dgl.DGLGraph): DGL graph containing node and edge data.
+            inputs (dict): Node features for source and destination nodes.
+            edge_attr (dict): Edge attributes for each relationship type.
+            mod_args (dict, optional): Additional arguments for edge-level models. Default is None.
+            mod_kwargs (dict, optional): Additional keyword arguments for edge-level models. Default is None.
+
+        Returns:
+            dict: Aggregated output features for target nodes.
+        """
         if mod_args is None:
             mod_args = {}
         if mod_kwargs is None:
@@ -231,6 +305,16 @@ class HeteroGraph(nn.Module):
 
 # Heterogeneous Message Passing Neural Network
 class HMGNN(nn.Module):
+
+    """Heterogeneous Message Passing Neural Network for learning node representations.
+
+    Args:
+        in_feats (int): Input feature size for nodes.
+        hid_feats (int): Hidden feature size for nodes.
+        out_feats (int): Output feature size for nodes.
+        rel_names (list): List of relationship types.
+        num_heads (int): Number of attention heads.
+    """
     def __init__(self, in_feats, hid_feats, out_feats, rel_names, num_heads):
         super().__init__()
         self.conv1 = HeteroGraph({
@@ -244,6 +328,17 @@ class HMGNN(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, graph, inputs, edge_attr):
+
+         """Forward pass for the HMGNN.
+
+        Args:
+            graph (dgl.DGLGraph): DGL graph containing node and edge data.
+            inputs (dict): Node features for processing.
+            edge_attr (dict): Edge attributes for each relationship type.
+
+        Returns:
+            dict: Node representations after processing.
+        """
         h = self.conv1(graph, inputs, edge_attr)
         h = {k: v.reshape(v.shape[0], -1) for k, v in h.items()}
         h = {k: F.relu(v) for k, v in h.items()}
@@ -256,6 +351,16 @@ class HMGNN(nn.Module):
 
 # Main model
 class Model(nn.Module):
+
+    """Main model integrating the heterogeneous graph neural network and prediction.
+
+    Args:
+        in_features (int): Input feature size for nodes.
+        hidden_features (int): Hidden feature size for nodes.
+        out_features (int): Output feature size for nodes.
+        rel_names (list): List of relationship types.
+        num_heads (int): Number of attention heads.
+    """
     def __init__(self, in_features, hidden_features, out_features, rel_names, num_heads):
         super().__init__()
         self.rel_names = rel_names
@@ -274,12 +379,37 @@ class Model(nn.Module):
             nn.init.xavier_normal_(fc.weight,gain=1.414)
 
     def predict(self, h, pos_edge_index, neg_edge_index):
+    """Predict the likelihood of edges between node pairs.
+
+        Args:
+            h (torch.Tensor): Node representations.
+            pos_edge_index (torch.Tensor): Positive edge indices.
+            neg_edge_index (torch.Tensor): Negative edge indices.
+
+        Returns:
+            torch.Tensor: Predicted scores for edges.
+        """
+        
         edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
         logits = cosine_similarity(h[edge_index[0]], h[edge_index[1]])
         logits_2 = self.relu(logits)
         return logits_2
 
     def forward(self, g, neg_g, node_feat, edge_attr, etype):
+        """Forward pass for the main model.
+
+        Args:
+            g (dgl.DGLGraph): DGL graph containing node and edge data.
+            neg_g (dgl.DGLGraph): Negative graph for contrastive learning.
+            node_feat (dict): Node features for input.
+            edge_attr (dict): Edge attributes for each relationship type.
+            etype (str): Relationship type for edge predictions.
+
+        Returns:
+            tuple: Predictions for positive and negative edges, along with node representations.
+        """
+
+        
         feat2 = {}
         feat2['user'] = self.relu(self.fc_list_node[0](node_feat['user']))
         feat2['poi'] = self.relu(self.fc_list_node[1](node_feat['poi']))
