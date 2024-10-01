@@ -30,13 +30,13 @@ device = torch.device('cuda:' + args.cuda if torch.cuda.is_available() else 'cpu
 city=args.city
 
 
-#Hyper-parameters
+# Hyper-parameters
 
-d_node=128                                                         # Dimension of node features
-epoch=args.epochs                                                  # Number of training epochs
-K=args.multihead                                                   # Number of heads for multi-head attention
-lambda_1=args.lambda_1                                             # Weight for contrastive loss
-lambda_2=args.lambda_2                                             # Weight for link prediction loss
+d_node=128                                                          # Dimension of node features
+epoch=args.epochs                                                   # Number of training epochs
+K=args.multihead                                                    # Number of heads for multi-head attention
+lambda_1=args.lambda_1                                              # Weight for contrastive loss
+lambda_2=args.lambda_2                                              # Weight for link prediction loss
 lambda_3=args.lambda_3                                              # Weight for margin loss
 file='output1/'+str(city)+'-*-_multi_head_'+str(K)+'lambda_1_'+str(lambda_1)+'lambda_2_'+str(lambda_2)+'lambda_3_------'+str(lambda_3)+'.txt'
 print(file)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     Active_association_feats = g.edges['Active_association'].data['Ac_fe'].to(device)
     Co_visiting_feats = g.edges['Co_visiting'].data['Co_fe'].to(device)
     
-    #Edge features dictionar
+    # Edge features dictionar
     edge_attr = {'friend': friend_feats, 'visit': visit_feats, 'co_occurrence': co_occurrence_feat,'live_with': live_with_feats, 're_live_with': re_live_with_feats, 'class_same': class_same_feats,'re_visit': re_visit_feats,'Active_association':Active_association_feats,'Co_visiting':Co_visiting_feats}
 
     # Get positive edge indices
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     
     for epoch in range(epoch):
         # Clear CUDA cache to manage memory
-        torch.cuda.memory_reserved()                                               # Check reserved memory
-        torch.cuda.empty_cache()                                                   # Release unused memory
+        torch.cuda.memory_reserved()                                                     # Check reserved memory
+        torch.cuda.empty_cache()                                                         # Release unused memory
 
         # Construct negative graph
         negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user'))
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         user_emb = node_emb['user']
 
         # Clean up temporary variables
-        del negative_graph                                                           # Remove negative graph to free memory
+        del negative_graph                                                               # Remove negative graph to free memory
    
 
         # Get negative edge indices
@@ -148,7 +148,7 @@ if __name__ == '__main__':
             need_write = f"epoch {epoch} loss: {loss.item()} best_auc: {best_auc} best_ap: {best_ap} " \
                              f"f1_pos: {f1_pos} f1_neg: {f1_neg} f1_macro: {f1_macro}"
 
-            #need_write="epoch"+str(epoch)+" best_auc: "+str(best_auc)+" best_ap: "+str(best_ap)
+            # need_write="epoch"+str(epoch)+" best_auc: "+str(best_auc)+" best_ap: "+str(best_ap)
             top='top_1+'+str(top_k[0])+' top_5+'+str(top_k[1])+' top_10+'+str(top_k[2])+' top_15+'+str(top_k[3])+' top_20+'+str(top_k[4])
             with open(file, 'a+') as f:
                 f.write(need_write + '\n')                                           # Write loss and metrics
