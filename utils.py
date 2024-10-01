@@ -16,7 +16,7 @@ args=parse()
 
 device = torch.device('cuda:' + args.cuda if torch.cuda.is_available() else 'cpu')
 
-#Generate link labels
+# Generate link labels
 def get_link_labels(pos_edge_index, neg_edge_index):
 
     """
@@ -33,7 +33,7 @@ def get_link_labels(pos_edge_index, neg_edge_index):
     link_labels[:pos_edge_index.size(1)] = 1                                                  # Set positive sample labels to 1
     return link_labels
     
-#Constructing negative sample graph
+# Constructing negative sample graph
 def construct_negative_graph(graph, k, etype):
     
     """
@@ -44,7 +44,6 @@ def construct_negative_graph(graph, k, etype):
     :param etype:  (Edge type)
     :return:  (Negative sample graph)
     """
-
     
     utype, _, vtype = etype                                                                  # Get source and target types of the edge
     src, dst = graph.edges(etype=etype)                                                      # Get source and target nodes of edges
@@ -113,7 +112,7 @@ def contrastive_loss(user_emb,g):
     lori_mp = -torch.log(matrix_mp2sc.mul(adj_friend).sum(dim=-1)).mean()                    # Calculate contrastive loss
     return lori_mp
     
-#Calculates a margin loss to ensure positive pairs have higher similarity scores than negative pairs.
+# Calculates a margin loss to ensure positive pairs have higher similarity scores than negative pairs.
 def margin_loss(pos_score, neg_score):
     """
     Calculate margin loss.
@@ -124,7 +123,7 @@ def margin_loss(pos_score, neg_score):
     n_edges = pos_score.shape[0]                                                                 # Get number of edges
     return (1 - pos_score.unsqueeze(1) + neg_score.view(n_edges, -1)).clamp(min=0).mean()        #  Calculate and return loss
     
-#Generates negative edges.
+# Generates negative edges.
 def neg_edge_in(graph,k,etype):
    
     """
@@ -143,10 +142,7 @@ def neg_edge_in(graph,k,etype):
     neg_edge_ = torch.stack([neg_src, neg_dst], dim=0)                                        # Combine negative edge indices
     return neg_edge_
 
-
-
-
-#Test link prediction performance
+# Test link prediction performance
 
 def test(user_emb,g,friend_list_index_test):
     """
@@ -156,7 +152,6 @@ def test(user_emb,g,friend_list_index_test):
     :param friend_list_index_test:  (Test friendship list indices)
     :return: AUC, AP, top_k, F1 score
     """
-
     
     src, dst = g.edges(etype='friend')                                           # Get source and target of friendship edges
     src=list(src.cpu().detach().numpy())                                         # Convert to list
@@ -264,7 +259,7 @@ def test(user_emb,g,friend_list_index_test):
         f1_macro = sklearn.metrics.f1_score(test_labels.detach().numpy(), test_preds_binary.detach().numpy(), average='macro')
 
 
-        #  Print results
+        # Print results
         print('Link Prediction AUC:', auc)
         print("Average Precision (AP):", ap)
         print("F1 Score (Positive Class):", f1_pos)
