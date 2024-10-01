@@ -73,10 +73,10 @@ if __name__ == '__main__':
 
     # Get positive edge indices
     pos_edge_index_2 = []
-    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))                            # Get positive edges
-    pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())                     # Append source nodes
-    pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())                     # Append target nodes
-    pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)                # Convert to tensor
+    pos_edge_index = g.edges(etype=('user', 'friend', 'user'))                             # Get positive edges
+    pos_edge_index_2.append(pos_edge_index[0].cpu().detach().numpy())                      # Append source nodes
+    pos_edge_index_2.append(pos_edge_index[1].cpu().detach().numpy())                      # Append target nodes
+    pos_edge_index_2 = torch.tensor(np.array(pos_edge_index_2)).to(device)                 # Convert to tensor
 
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=0)                 # Adam optimizer
     best_auc = 0     # Best AUC tracker
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     
     for epoch in range(epoch):
         # Clear CUDA cache to manage memory
-        torch.cuda.memory_reserved()                                                     # Check reserved memory
-        torch.cuda.empty_cache()                                                         # Release unused memory
+        torch.cuda.memory_reserved()                                                       # Check reserved memory
+        torch.cuda.empty_cache()                                                           # Release unused memory
 
         # Construct negative graph
         negative_graph = construct_negative_graph(g, 5, ('user', 'friend', 'user'))
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         user_emb = node_emb['user']
 
         # Clean up temporary variables
-        del negative_graph                                                               # Remove negative graph to free memory
+        del negative_graph                                                                # Remove negative graph to free memory
    
 
         # Get negative edge indices
@@ -138,10 +138,10 @@ if __name__ == '__main__':
                 best_auc = test_auc                                                      # Update best AUC
                 print("best_auc:", best_auc)
                 best_model_state = model.state_dict()                                    # Save model state
-                torch.save(best_model_state, "pth/best_model.pth")                       #Save best model 
+                torch.save(best_model_state, "pth/best_model.pth")                       # Save best model 
                 np.save("data/save_user_embedding/SP/sp_3/_best_auc_SP" + str(best_auc) + ".npy", user_emb.cpu().detach().numpy())
             if ap > best_ap:
-                best_ap = ap                                                           # Update best AP
+                best_ap = ap                                                             # Update best AP
                 print("beat_ap:", ap)
 
     
