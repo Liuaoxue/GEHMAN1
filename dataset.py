@@ -17,7 +17,7 @@ np.random.seed(30100)
 random.seed(30100)
 
 
-#Set all random seeds for reproducibility.
+# Set all random seeds for reproducibility.
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -26,7 +26,7 @@ def setup_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-#Load and preprocess data for the specified city and node feature dimension
+# Load and preprocess data for the specified city and node feature dimension
 def data(d_node,city):
 
     #Load edge and node attribute data from .npy files
