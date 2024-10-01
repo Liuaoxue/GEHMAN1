@@ -28,9 +28,9 @@ def get_link_labels(pos_edge_index, neg_edge_index):
     """
     # returns a tensor:
     # [1,1,1,1,...,0,0,0,0,0,..] with the number of ones is equel to the lenght of pos_edge_index
-    E = pos_edge_index.size(1) + neg_edge_index.size(1)                #Calculate total number of edges
-    link_labels = torch.zeros(E, dtype=torch.float, device=device)     #Initialize label tensor
-    link_labels[:pos_edge_index.size(1)] = 1                           #Set positive sample labels to 1
+    E = pos_edge_index.size(1) + neg_edge_index.size(1)                                       # Calculate total number of edges
+    link_labels = torch.zeros(E, dtype=torch.float, device=device)                            # Initialize label tensor
+    link_labels[:pos_edge_index.size(1)] = 1                                                  # Set positive sample labels to 1
     return link_labels
     
 #Constructing negative sample graph
@@ -46,13 +46,13 @@ def construct_negative_graph(graph, k, etype):
     """
 
     
-    utype, _, vtype = etype                                    # Get source and target types of the edge
-    src, dst = graph.edges(etype=etype)                        # Get source and target nodes of edges
-    neg_src = src.repeat_interleave(k).to(device)              # Repeat source nodes to generate negative samples
+    utype, _, vtype = etype                                                                  # Get source and target types of the edge
+    src, dst = graph.edges(etype=etype)                                                      # Get source and target nodes of edges
+    neg_src = src.repeat_interleave(k).to(device)                                            # Repeat source nodes to generate negative samples
     neg_dst = torch.randint(0, graph.num_nodes(vtype), (len(src) * k,)).to(device)
     return dgl.heterograph(
-        {etype: (neg_src, neg_dst)},                               #Construct negative sample graph
-        num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})   #Specify number of nodes
+        {etype: (neg_src, neg_dst)},                                                         # Construct negative sample graph
+        num_nodes_dict={ntype: graph.num_nodes(ntype) for ntype in graph.ntypes})            # Specify number of nodes
 
 class HeteroDotProductPredictor(nn.Module):
 
@@ -72,17 +72,17 @@ class HeteroDotProductPredictor(nn.Module):
         
         utype, _, vtype = etype
         if utype==vtype:
-            src, dst = graph.edges(etype=etype)       # source and target types of the edge
-            h2=h[utype]                               # Get node features
+            src, dst = graph.edges(etype=etype)                                             # source and target types of the edge
+            h2=h[utype]                                                                     # Get node features
             logits = cosine_similarity(h2[src], h2[dst]) # Calculate cosine similarity
-            logits_2 = torch.relu(logits)                   # Apply ReLU activation
+            logits_2 = torch.relu(logits)                                                   # Apply ReLU activation
             return logits_2
         if utype!=vtype:
-            src, dst = graph.edges(etype=etype)              # Get source and target nodes
-            h2_u=h[utype]                                   # Get source node features
-            h2_v=h[vtype]                                   # Get target node features
-            logits = cosine_similarity(h2_u[src], h2_v[dst])   # Calculate cosine similarity
-            logits_2 = torch.relu(logits)                      # Apply ReLU activation
+            src, dst = graph.edges(etype=etype)                                             # Get source and target nodes
+            h2_u=h[utype]                                                                   # Get source node features
+            h2_v=h[vtype]                                                                   # Get target node features
+            logits = cosine_similarity(h2_u[src], h2_v[dst])                                # Calculate cosine similarity
+            logits_2 = torch.relu(logits)                                                   # Apply ReLU activation
             return logits_2
 
 
@@ -97,20 +97,20 @@ def contrastive_loss(user_emb,g):
     """   
     
     # adj_friend=g.adj(scipy_fmt='coo',etype='friend')
-    adj_friend = g.adj_external(scipy_fmt='coo', etype='friend')              # Get adjacency matrix for friendship relation
-    adj_friend = adj_friend.todense()                                        # Convert to dense matrix
+    adj_friend = g.adj_external(scipy_fmt='coo', etype='friend')                             # Get adjacency matrix for friendship relation
+    adj_friend = adj_friend.todense()                                                        # Convert to dense matrix
     row, col = np.diag_indices_from(adj_friend)
-    adj_friend[row, col] = 1                                                 #  Set self-connections to 1
+    adj_friend[row, col] = 1                                                                 # Set self-connections to 1
     # a=torch.norm(user_emb[0],dim=-1,keepdim=True)
-    user_emb_norm = torch.norm(user_emb, dim=-1, keepdim=True)                    # Calculate norm of user embeddings
+    user_emb_norm = torch.norm(user_emb, dim=-1, keepdim=True)                               # Calculate norm of user embeddings
 
-    dot_numerator = torch.mm(user_emb, user_emb.t())                             # Calculate dot product
-    dot_denominator = torch.mm(user_emb_norm, user_emb_norm.t())               # Calculate dot product of norms
-    sim = torch.exp(dot_numerator / dot_denominator / 0.2)                      # Calculate similarity
-    x = (torch.sum(sim, dim=1).view(-1, 1) + 1e-8)                                 # Prevent division by zero
-    matrix_mp2sc = sim / (torch.sum(sim, dim=1).view(-1, 1) + 1e-8)                  # Normalize similarity
-    adj_friend = torch.tensor(adj_friend).to(device)                             # Convert adjacency matrix to tensor
-    lori_mp = -torch.log(matrix_mp2sc.mul(adj_friend).sum(dim=-1)).mean()      # Calculate contrastive loss
+    dot_numerator = torch.mm(user_emb, user_emb.t())                                         # Calculate dot product
+    dot_denominator = torch.mm(user_emb_norm, user_emb_norm.t())                             # Calculate dot product of norms
+    sim = torch.exp(dot_numerator / dot_denominator / 0.2)                                   # Calculate similarity
+    x = (torch.sum(sim, dim=1).view(-1, 1) + 1e-8)                                           # Prevent division by zero
+    matrix_mp2sc = sim / (torch.sum(sim, dim=1).view(-1, 1) + 1e-8)                          # Normalize similarity
+    adj_friend = torch.tensor(adj_friend).to(device)                                         # Convert adjacency matrix to tensor
+    lori_mp = -torch.log(matrix_mp2sc.mul(adj_friend).sum(dim=-1)).mean()                    # Calculate contrastive loss
     return lori_mp
     
 #Calculates a margin loss to ensure positive pairs have higher similarity scores than negative pairs.
@@ -121,8 +121,8 @@ def margin_loss(pos_score, neg_score):
     :param neg_score:  (Negative similarity scores)
     :return:  (Margin loss value)
     """
-    n_edges = pos_score.shape[0]                                                          # Get number of edges
-    return (1 - pos_score.unsqueeze(1) + neg_score.view(n_edges, -1)).clamp(min=0).mean()  #  Calculate and return loss
+    n_edges = pos_score.shape[0]                                                                 # Get number of edges
+    return (1 - pos_score.unsqueeze(1) + neg_score.view(n_edges, -1)).clamp(min=0).mean()        #  Calculate and return loss
     
 #Generates negative edges.
 def neg_edge_in(graph,k,etype):
@@ -136,9 +136,9 @@ def neg_edge_in(graph,k,etype):
     """
     
     # edgtypes= ('user', 'friend', 'user')
-    utype, _, vtype = etype                                                            # Get source and target types of the edge
-    src, dst = graph.edges(etype=etype)                                                 # Get source and target nodes
-    neg_src = src.repeat_interleave(k)                                                      # Repeat source nodes to generate negative samples
+    utype, _, vtype = etype                                                                   # Get source and target types of the edge
+    src, dst = graph.edges(etype=etype)                                                       # Get source and target nodes
+    neg_src = src.repeat_interleave(k)                                                        # Repeat source nodes to generate negative samples
     neg_dst = torch.randint(0, graph.num_nodes(vtype), (len(src) * k,)).to(device)            # Randomly generate target nodes
     neg_edge_ = torch.stack([neg_src, neg_dst], dim=0)                                        # Combine negative edge indices
     return neg_edge_
@@ -158,10 +158,10 @@ def test(user_emb,g,friend_list_index_test):
     """
 
     
-    src, dst = g.edges(etype='friend')                          # Get source and target of friendship edges
-    src=list(src.cpu().detach().numpy())                        #  Convert to list
-    dst=list(dst.cpu().detach().numpy())                        # Convert to list
-    friend_ture={}                                           #  Store true friendship relations
+    src, dst = g.edges(etype='friend')                                           # Get source and target of friendship edges
+    src=list(src.cpu().detach().numpy())                                         # Convert to list
+    dst=list(dst.cpu().detach().numpy())                                         # Convert to list
+    friend_ture={}                                                               # Store true friendship relations
     for i in range(len(src)):
         if src[i] in friend_ture.keys():
             friend_ture[src[i]]=friend_ture[src[i]]+[dst[i]]
@@ -175,7 +175,7 @@ def test(user_emb,g,friend_list_index_test):
     torch.cuda.manual_seed(30100)
     torch.cuda.manual_seed_all(30100)
     
-    #  Generate negative sample pairs
+    # Generate negative sample pairs
     test_neg_src = test_pos_src
     test_neg_dst = torch.randint(0, g.num_nodes(ntype='user'), (g.num_edges(etype='friend'),))
     test_src = torch.cat([test_pos_src, test_neg_src])
@@ -187,34 +187,34 @@ def test(user_emb,g,friend_list_index_test):
     for i in range(len(test_src)):                                                                          # Calculate cosine similarity
         test_preds.append((F.cosine_similarity(user_emb[test_src[i]], user_emb[test_dst[i]], dim=0)))
 
-    #   Calculate AUC and Average Precision
+    # Calculate AUC and Average Precision
     auc = sklearn.metrics.roc_auc_score(test_labels.detach().numpy(), torch.tensor(test_preds))
     ap = sklearn.metrics.average_precision_score(test_labels.detach().numpy(), torch.tensor(test_preds))
     print('Link Prediction AUC:', auc)
     print("average_precision AP:", ap)
 
-    #      Calculate Top-k accuracy
+    # Calculate Top-k accuracy
     user_emb_norm = torch.norm(user_emb, dim=-1, keepdim=True)
     dot_numerator = torch.mm(user_emb, user_emb.t())
     dot_denominator = torch.mm(user_emb_norm, user_emb_norm.t())
     sim = (dot_numerator / dot_denominator )
 
-    #    Initialize similarity matrix 
-    user_number=g.num_nodes(ntype='user')                      #   Number of user nodes  
-    cos=[[-1]*user_number for i in range(user_number) ]        #  Initialize similarity matrix
+    # Initialize similarity matrix 
+    user_number=g.num_nodes(ntype='user')                                                 # Number of user nodes  
+    cos=[[-1]*user_number for i in range(user_number) ]                                   # Initialize similarity matrix
     for i in range(g.num_nodes(ntype='user')):
-        sim[i][i]=-1                                            # Set self-connections to -1
-        if i in friend_ture.keys():                             # If user is in friend dictionary
-            x=friend_ture[i]                                   # Iterate over friends
-            for j in x:
-                sim[i][j]=-1                                #  Set friendship relationships to -1
+        sim[i][i]=-1                                                                      # Set self-connections to -1
+        if i in friend_ture.keys():                                                       # If user is in friend dictionary
+            x=friend_ture[i]                                                              # Iterate over friends
+            for j in x:                                                        
+                sim[i][j]=-1                                                              # Set friendship relationships to -1
 
 
 
-    friend_test_true={}                                      # Process test positive samples
-    test_pos_src=list(test_pos_src.numpy())                   # Convert to list
+    friend_test_true={}                                             # Process test positive samples
+    test_pos_src=list(test_pos_src.numpy())                         # Convert to list
     test_pos_dst=list(test_pos_dst.numpy())
-    for i in range(len(test_pos_src)):                       # Update friend dictionary
+    for i in range(len(test_pos_src)):                              # Update friend dictionary
         if test_pos_src[i] in friend_test_true.keys():
             friend_test_true[test_pos_src[i]]=friend_test_true[test_pos_src[i]]+[test_pos_dst[i]]
         else:
@@ -234,20 +234,20 @@ def test(user_emb,g,friend_list_index_test):
         y_score.append(sim[i])
 
     
-    k=[1,5,10,15,20] #top-k                                  # start counting top-k
+    k=[1,5,10,15,20] #top-k                                    # start counting top-k
 
-    right_k=[0 for i in range(len(k))]                      # Initialize correct count
+    right_k=[0 for i in range(len(k))]                         # Initialize correct count
     for i in range(len(y_true)):
-        sim_i = y_score[i].cpu().detach().numpy()         # Get similarity
+        sim_i = y_score[i].cpu().detach().numpy()              # Get similarity
         for j in range(len(k)):
-            s = sim_i.argsort()[-k[j]:][::-1]           #Get Top-k similarity indices
+            s = sim_i.argsort()[-k[j]:][::-1]                  # Get Top-k similarity indices
             if set(list(s)) & set(y_true[i]):
-                right_k[j]+=1                         # Increase correct count
+                right_k[j]+=1                                  # Increase correct count
     top_k=[0 for i in range(len(k))]
 
     # Print Top-k accuracy
     for j in range(len(k)):
-        top_k[j]=right_k[j]/len(y_true)                                 # Calculate accuracy
+        top_k[j]=right_k[j]/len(y_true)                                   # Calculate accuracy
         print("Top ",k[j],'accuracy score is:', right_k[j]/len(y_true))
     
         # Calculate F1 scores
