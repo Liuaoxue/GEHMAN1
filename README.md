@@ -14,7 +14,7 @@ Before to execute GEHMAN necessary to install the following packages:
 
 ### Basic Usage
 
-- --run  main.py to train the GEHMAN. and it probably need at least 11G GPU memory 
+- --run  train.py to train the GEHMAN. and it probably need at least 11G GPU memory 
 - --run  test.py to estimate the performance of GEHMAN based on the user representations that we learned during our experiments. You can also use this code to individually test the effects of your own learned representation.
 
 ### Miscellaneous
